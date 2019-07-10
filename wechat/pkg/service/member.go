@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/xid"
 	"sdkeji/wechat/pkg/app"
+	"sdkeji/wechat/pkg/code"
 	"sdkeji/wechat/pkg/entity"
 	"sdkeji/wechat/pkg/form"
 )
@@ -12,6 +13,35 @@ import (
 var Member MemberService
 
 type MemberService struct{}
+
+func (m *MemberService) ModifyMember(req entity.ModifyMemberRequest) (member entity.Member, err error) {
+	err = v.ValidateStruct(&req,
+		v.Field(&req.PersonID, v.Required),
+	)
+	if err != nil {
+		return
+	}
+	exist, err := app.DB.Where("person_id = ?", req.PersonID).Get(&member)
+	if err != nil {
+		err = errors.WithStack(err)
+		return
+	}
+	if !exist {
+		err = code.Error(code.PersonNotExist).WithDetails(err)
+		return
+	}
+	var cols []string
+	if req.FormID != "" {
+		member.FormID = req.FormID
+		cols = append(cols, "form_id")
+	}
+	_, err = app.DB.ID(member.ID).Cols(cols...).Update(&member)
+	if err != nil {
+		err = errors.WithStack(err)
+		return
+	}
+	return
+}
 
 //绑定用户（一对一）
 func (m *MemberService) BindMember(req form.BindMemberRequest) (member entity.Member, err error) {
@@ -27,20 +57,14 @@ func (m *MemberService) BindMember(req form.BindMemberRequest) (member entity.Me
 		mem   entity.Member
 		exist bool
 	)
-	exist, err = app.DB.Where("open_id = ?", req.OpenID).Get(&mem)
+	exist, err = app.DB.Where("open_id = ?", req.OpenID).And("state = ?", entity.MemberStateBind).Get(&mem)
 	if err != nil {
 		err = errors.WithStack(err)
 		return
 	}
 	if exist {
 		if mem.PersonID == req.PersonID {
-			mem.State = entity.MemberStateBind
-			_, err = app.DB.ID(mem.ID).Cols("state").Update(&mem)
-			if err != nil {
-				err = errors.WithStack(err)
-				return
-			}
-			app.Logger.Info("member already exist ,update member success.", "member:", mem.ID)
+			app.Logger.Info("member and open id already exist.", "member:", mem.ID)
 			member = mem
 			return
 		} else {

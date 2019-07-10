@@ -15,7 +15,6 @@ var Message = &MessageService{
 
 type MessageWork struct {
 	PersonID string `json:"person_id"`
-	FormID   string `json:"form_id"`
 	Message  map[string]interface{}
 }
 
@@ -52,7 +51,7 @@ func (m *MessageService) SendMsg(msg MessageWork) (err error) {
 	var sendReq applets.SendRequest
 	sendReq.Touser = mem.OpenID
 	sendReq.Data = msg.Message
-	sendReq.FormID = msg.FormID
+	sendReq.FormID = mem.FormID
 	err = app.Wechat.SendMsg(sendReq)
 	if err != nil {
 		err = errors.WithStack(err)
@@ -63,7 +62,6 @@ func (m *MessageService) SendMsg(msg MessageWork) (err error) {
 
 func (m *MessageService) Sender(work MessageWork) error {
 	err := v.ValidateStruct(&work,
-		v.Field(&work.FormID, v.Required),
 		v.Field(&work.PersonID, v.Required),
 		v.Field(&work.Message, v.Required),
 	)
