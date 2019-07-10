@@ -1,0 +1,36 @@
+stages:
+  - prepare
+  - build
+
+build_binary:
+  stage: prepare
+  image: golang:1-alpine
+  variables:
+    BUILD_VERSION: $CI_COMMIT_REF_NAME.$CI_COMMIT_SHORT_SHA
+  script:
+    - env
+    - go mod download
+    - go get github.com/gobuffalo/packr/packr
+    - packr -z
+    - go build -ldflags "-X $CI_PROJECT_PATH/pkg/app.BuildTime=`TZ=UTC-8 date +%FT%T%z` -X $CI_PROJECT_PATH/pkg/app.Version=$BUILD_VERSION" -o binaries/$CI_PROJECT_NAME cmd/server/main.go
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_NAME"
+    untracked: true
+    expire_in: 60 mins
+    paths:
+      - binaries
+
+build_image:
+  stage: build
+  image: docker:stable
+  variables:
+    BUILD_COMMIT: $CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA
+    BUILD_REF: $CI_COMMIT_REF_NAME
+  dependencies:
+    - build_binary
+  script:
+    - env
+    - echo "${CI_JOB_TOKEN}" | docker login --username gitlab-ci-token --password-stdin ${CI_REGISTRY}
+    - docker build -t $CI_REGISTRY_IMAGE:$BUILD_COMMIT -t $CI_REGISTRY_IMAGE:$BUILD_REF  .
+    - docker push $CI_REGISTRY_IMAGE:$BUILD_COMMIT
+    - docker push $CI_REGISTRY_IMAGE:$BUILD_REF
