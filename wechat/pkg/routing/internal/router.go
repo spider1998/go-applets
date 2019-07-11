@@ -12,10 +12,6 @@ func Register(router *routing.RouteGroup) {
 		handler := NewMessageHandler()
 		router.Post("/message", handler.SendMessage) //推送模板消息
 	}
-	{
-		handler := NewMemberHandler()
-		router.Patch("/member", handler.ModifyMember) //存储formID
-	}
 }
 
 func internalTokenChecker(c *routing.Context) error {

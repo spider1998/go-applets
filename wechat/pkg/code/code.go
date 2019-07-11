@@ -13,6 +13,7 @@ const (
 	InvalidInternalToken api.Code = "INVALID_INTERNALTOKEN "
 	RuleNotExist         api.Code = "RULE_NOT_EXIST"
 	DeviceKeyNotExist    api.Code = "DEVICE_KEY_NOT_EXIST"
+	FormIDNotExist       api.Code = "FORM_ID_NOT_EXIST"
 )
 
 func Error(code api.Code) api.APIError {

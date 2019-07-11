@@ -11,6 +11,7 @@ func Register(router *routing.RouteGroup) {
 		handler := NewMemberHandler()
 		router.Post("/bind", handler.BindMember)       //绑定用户
 		router.Get("/check-token", handler.CheckToken) //验证token（微信服务器使用）
+		router.Post("/form-id", handler.CollectFormID) //收集form_id
 	}
 
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	v "github.com/go-ozzo/ozzo-validation"
+	"github.com/mediocregopher/radix.v2/redis"
 	"github.com/pkg/errors"
 	"sdkeji/wechat/lib/applets"
 	"sdkeji/wechat/pkg/app"
@@ -48,10 +49,21 @@ func (m *MessageService) SendMsg(msg MessageWork) (err error) {
 		err = code.Error(code.UserNotBindWechat).WithMessage("user not bind wechat.")
 		return
 	}
+	//获取form_id
+	formID, err := app.Redis.Cmd("GET", "wx_id:"+msg.PersonID).Str()
+	if err != nil {
+		if err == redis.ErrRespNil {
+			err = code.Error(code.FormIDNotExist)
+			return err
+		}
+		err = errors.WithStack(err)
+		return err
+	}
+
 	var sendReq applets.SendRequest
 	sendReq.Touser = mem.OpenID
 	sendReq.Data = msg.Message
-	sendReq.FormID = mem.FormID
+	sendReq.FormID = formID
 	err = app.Wechat.SendMsg(sendReq)
 	if err != nil {
 		err = errors.WithStack(err)

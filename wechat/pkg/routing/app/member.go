@@ -3,6 +3,7 @@ package app
 import (
 	"git.sdkeji.top/share/sdlib/api"
 	routing "github.com/go-ozzo/ozzo-routing"
+	"github.com/pkg/errors"
 	"sdkeji/wechat/lib/applets"
 	"sdkeji/wechat/pkg/app"
 	"sdkeji/wechat/pkg/code"
@@ -49,4 +50,19 @@ func (m MemberHandler) CheckToken(c *routing.Context) error {
 		return c.Write("failed.")
 	}
 	return c.Write(req.Echostr)
+}
+
+//存储form_id
+func (m MemberHandler) CollectFormID(c *routing.Context) error {
+	var req form.CollectFormIDRequest
+	err := c.Read(&req)
+	if err != nil {
+		return code.Error(api.InvalidData).WithDetails(err)
+	}
+	personID := GetSessionPerson(c).ID
+	err = app.Redis.Cmd("SET", "wx_id:"+personID, req.FormID, "ex", 604800).Err
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
